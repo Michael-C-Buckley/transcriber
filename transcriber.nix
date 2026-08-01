@@ -23,6 +23,6 @@
     fi
 
     # Normalize the text for use
-    ${getExe python3} ${./transcript.py} "$output"
+    ${getExe python3} ${./scripts/transcript.py} "$output"
   '';
 }

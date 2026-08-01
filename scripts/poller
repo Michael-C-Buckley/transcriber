@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir=${TRANSCRIBER_STATE_DIR:-/var/lib/transcriber}
+output_dir=${TRANSCRIBER_OUTPUT_DIR:-/var/lib/transcriber/output}
+sources_file=${TRANSCRIBER_SOURCES:-/etc/transcriber/sources.txt}
+
+archive="$state_dir/processed.txt"
+lock="$state_dir/poll.lock"
+
+mkdir -p "$state_dir" "$output_dir"
+touch "$archive"
+
+exec 9>"$lock"
+
+if ! flock -n 9; then
+  echo "A transcriber poll is already running"
+  exit 0
+fi
+
+while IFS= read -r source; do
+  [[ -z "$source" || "$source" == \#* ]] && continue
+
+  yt-dlp \
+    --ignore-config \
+    --flat-playlist \
+    --playlist-end 20 \
+    --print '%(id)s	%(webpage_url)s' \
+    "$source"
+
+done < "$sources_file" |
+awk -F '\t' '!seen[$1]++' |
+while IFS=$'\t' read -r video_id video_url; do
+  if grep -Fqx "$video_id" "$archive"; then
+    continue
+  fi
+
+  echo "Processing $video_id"
+
+  if (
+    cd "$output_dir"
+    transcriber "$video_url"
+  ); then
+    printf '%s\n' "$video_id" >> "$archive"
+  else
+    echo "Failed to process $video_id" >&2
+  fi
+done
