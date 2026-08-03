@@ -2,25 +2,9 @@
   config,
   lib,
   pkgs,
-  transcriber,
   ...
 }: let
   cfg = config.services.transcriber-poll;
-
-  poller = pkgs.writeShellApplication {
-    name = "transcriber-poll";
-
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.gawk
-      pkgs.gnugrep
-      pkgs.util-linux
-      pkgs.yt-dlp
-      transcriber
-    ];
-
-    text = builtins.readFile ./transcriber-poll.sh;
-  };
 
   sourcesFile = pkgs.writeText "transcriber-sources" (
     lib.concatStringsSep "\n" cfg.sources
@@ -47,7 +31,7 @@ in {
 
     calendar = lib.mkOption {
       type = lib.types.str;
-      default = "hourly";
+      default = "daily";
     };
   };
 
@@ -63,7 +47,7 @@ in {
 
         WorkingDirectory = cfg.outputDirectory;
 
-        ExecStart = lib.getExe poller;
+        ExecStart = lib.getExe (pkgs.callPackage ../poller.nix {});
 
         Environment = [
           "TRANSCRIBER_STATE_DIR=/var/lib/transcriber"
