@@ -38,15 +38,14 @@ done < "$sources_file" |
   awk -F $'\t' '!seen[$1]++' |
   {
     first_video=true
-
     while IFS=$'\t' read -r video_id video_url; do
       [[ -z "$video_id" || -z "$video_url" ]] && continue
 
-      if grep -Fqx "$video_id" "$archive"; then
+      if grep -Fqx -- "$video_id" "$archive"; then
+        echo "Already processed: $video_id"
         continue
       fi
 
-      # Delay only between actual processing attempts.
       if [[ "$first_video" == false ]]; then
         sleep "$video_delay"
       fi
