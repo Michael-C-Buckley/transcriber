@@ -1,0 +1,7 @@
+.git
+.github
+result
+result-*
+state
+output
+*.log
