@@ -3,19 +3,19 @@
   lib,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.services.transcriber-poll;
 
-  sourcesFile = pkgs.writeText "transcriber-sources" (
-    lib.concatStringsSep "\n" cfg.sources
-  );
-in {
+  sourcesFile = pkgs.writeText "transcriber-sources" (lib.concatStringsSep "\n" cfg.sources);
+in
+{
   options.services.transcriber-poll = {
     enable = lib.mkEnableOption "periodic video transcript ingestion";
 
     sources = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
       description = "Channel and playlist URLs to inspect.";
     };
 
@@ -36,49 +36,56 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    systemd.services.transcriber-poll = {
-      description = "Discover and transcribe new videos";
+    systemd = {
+      services.transcriber-poll = {
+        description = "Discover and transcribe new videos";
 
-      serviceConfig = {
-        Type = "oneshot";
+        serviceConfig = {
+          Type = "oneshot";
 
-        StateDirectory = "transcriber";
-        StateDirectoryMode = "0750";
+          StateDirectory = "transcriber";
+          StateDirectoryMode = "0750";
 
-        WorkingDirectory = cfg.outputDirectory;
+          WorkingDirectory = cfg.outputDirectory;
 
-        ExecStart = lib.getExe (pkgs.callPackage ../poller.nix {});
+          ExecStart = lib.getExe (pkgs.callPackage ../poller.nix { });
 
-        Environment = [
-          "TRANSCRIBER_STATE_DIR=/var/lib/transcriber"
-          "TRANSCRIBER_OUTPUT_DIR=${cfg.outputDirectory}"
-          "TRANSCRIBER_SOURCES=${sourcesFile}"
-          "TRANSCRIBER_SCAN_LIMIT=${toString cfg.scanLimit}"
-        ];
+          Environment = [
+            "TRANSCRIBER_STATE_DIR=/var/lib/transcriber"
+            "TRANSCRIBER_OUTPUT_DIR=${cfg.outputDirectory}"
+            "TRANSCRIBER_SOURCES=${sourcesFile}"
+            "TRANSCRIBER_SCAN_LIMIT=${toString cfg.scanLimit}"
+          ];
 
-        User = "transcriber";
-        Group = "transcriber";
+          User = "transcriber";
+          Group = "transcriber";
 
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectHome = true;
-        ProtectSystem = "strict";
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectHome = true;
+          ProtectSystem = "strict";
 
-        ReadWritePaths = [
-          "/var/lib/transcriber"
-          cfg.outputDirectory
-        ];
+          ReadWritePaths = [
+            "/var/lib/transcriber"
+            cfg.outputDirectory
+          ];
+        };
       };
-    };
 
-    systemd.timers.transcriber-poll = {
-      wantedBy = [ "timers.target" ];
+      timers.transcriber-poll = {
+        wantedBy = [ "timers.target" ];
 
-      timerConfig = {
-        OnCalendar = cfg.calendar;
-        Persistent = true;
-        RandomizedDelaySec = "10m";
+        timerConfig = {
+          OnCalendar = cfg.calendar;
+          Persistent = true;
+          RandomizedDelaySec = "10m";
+        };
       };
+      
+      tmpfiles.rules = [
+        "d /var/lib/transcriber 0750 transcriber transcriber -"
+        "d ${config.services.transcriber-poll.outputDirectory} 0750 transcriber transcriber -"
+      ];
     };
 
     users.users.transcriber = {
@@ -87,6 +94,6 @@ in {
       home = "/var/lib/transcriber";
     };
 
-    users.groups.transcriber = {};
+    users.groups.transcriber = { };
   };
 }

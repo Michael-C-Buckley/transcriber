@@ -20,7 +20,7 @@
           pkgs = nixpkgsFor.${system};
         in
         {
-          default = self.packages.${system}.transciber;
+          default = self.packages.${system}.transcriber;
           transcriber = pkgs.callPackage ./transcriber.nix { };
           poller = pkgs.callPackage ./poller.nix { };
         }

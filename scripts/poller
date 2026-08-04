@@ -4,6 +4,9 @@ set -euo pipefail
 state_dir=${TRANSCRIBER_STATE_DIR:-/var/lib/transcriber}
 output_dir=${TRANSCRIBER_OUTPUT_DIR:-/var/lib/transcriber/output}
 sources_file=${TRANSCRIBER_SOURCES:-/etc/transcriber/sources.txt}
+request_delay=${TRANSCRIBER_REQUEST_DELAY:-1}
+video_delay=${TRANSCRIBER_VIDEO_DELAY:-10}
+scan_limit=${TRANSCRIBER_SCAN_LIMIT:-20}
 
 archive="$state_dir/processed.txt"
 lock="$state_dir/poll.lock"
@@ -18,31 +21,46 @@ if ! flock -n 9; then
   exit 0
 fi
 
-while IFS= read -r source; do
+while IFS= read -r source || [[ -n "$source" ]]; do
+  # Ignore blank lines and comments.
   [[ -z "$source" || "$source" == \#* ]] && continue
 
   yt-dlp \
     --ignore-config \
     --flat-playlist \
-    --playlist-end 20 \
-    --print '%(id)s	%(webpage_url)s' \
+    --playlist-end "$scan_limit" \
+    --sleep-requests "$request_delay" \
+    --retry-sleep 'extractor:exp=2:30' \
+    --retry-sleep 'http:exp=2:30' \
+    --print $'%(id)s\t%(webpage_url)s' \
     "$source"
-
 done < "$sources_file" |
-awk -F '\t' '!seen[$1]++' |
-while IFS=$'\t' read -r video_id video_url; do
-  if grep -Fqx "$video_id" "$archive"; then
-    continue
-  fi
+  awk -F $'\t' '!seen[$1]++' |
+  {
+    first_video=true
 
-  echo "Processing $video_id"
+    while IFS=$'\t' read -r video_id video_url; do
+      [[ -z "$video_id" || -z "$video_url" ]] && continue
 
-  if (
-    cd "$output_dir"
-    transcriber "$video_url"
-  ); then
-    printf '%s\n' "$video_id" >> "$archive"
-  else
-    echo "Failed to process $video_id" >&2
-  fi
-done
+      if grep -Fqx "$video_id" "$archive"; then
+        continue
+      fi
+
+      # Delay only between actual processing attempts.
+      if [[ "$first_video" == false ]]; then
+        sleep "$video_delay"
+      fi
+      first_video=false
+
+      echo "Processing $video_id: $video_url"
+
+      if (
+        cd "$output_dir"
+        transcriber "$video_url"
+      ); then
+        printf '%s\n' "$video_id" >> "$archive"
+      else
+        echo "Failed to process $video_id" >&2
+      fi
+    done
+  }
