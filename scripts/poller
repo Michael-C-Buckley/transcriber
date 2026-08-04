@@ -11,6 +11,22 @@ scan_limit=${TRANSCRIBER_SCAN_LIMIT:-20}
 archive="$state_dir/processed.txt"
 lock="$state_dir/poll.lock"
 
+source_directory() {
+  local source=$1 path
+
+  # Keep YouTube channel names readable: @Channel/videos becomes
+  # Channel. Other source URLs retain the portion after their host.
+  path=${source#*://}
+  path=${path#*/}
+  path=${path%/}
+  if [[ "$path" == @* ]]; then
+    path=${path#@}
+    path=${path%%/*}
+  fi
+
+  printf '%s\n' "$path"
+}
+
 mkdir -p "$state_dir" "$output_dir"
 touch "$archive"
 
@@ -25,6 +41,8 @@ while IFS= read -r source || [[ -n "$source" ]]; do
   # Ignore blank lines and comments.
   [[ -z "$source" || "$source" == \#* ]] && continue
 
+  source_dir=$(source_directory "$source")
+
   yt-dlp \
     --ignore-config \
     --flat-playlist \
@@ -33,13 +51,16 @@ while IFS= read -r source || [[ -n "$source" ]]; do
     --retry-sleep 'extractor:exp=2:30' \
     --retry-sleep 'http:exp=2:30' \
     --print $'%(id)s\t%(webpage_url)s' \
-    "$source"
+    "$source" |
+    while IFS=$'\t' read -r video_id video_url; do
+      printf '%s\t%s\t%s\n' "$video_id" "$video_url" "$source_dir"
+    done
 done < "$sources_file" |
   awk -F $'\t' '!seen[$1]++' |
   {
     first_video=true
-    while IFS=$'\t' read -r video_id video_url; do
-      [[ -z "$video_id" || -z "$video_url" ]] && continue
+    while IFS=$'\t' read -r video_id video_url source_dir; do
+      [[ -z "$video_id" || -z "$video_url" || -z "$source_dir" ]] && continue
 
       if grep -Fqx -- "$video_id" "$archive"; then
         echo "Already processed: $video_id"
@@ -54,7 +75,8 @@ done < "$sources_file" |
       echo "Processing $video_id: $video_url"
 
       if (
-        cd "$output_dir"
+        mkdir -p "$output_dir/$source_dir"
+        cd "$output_dir/$source_dir"
         transcriber "$video_url"
       ); then
         printf '%s\n' "$video_id" >> "$archive"

@@ -3,7 +3,10 @@
 `poller` discovers recent videos from YouTube channel and playlist URLs, then
 runs `transcriber` for videos it has not already processed. It inspects the
 newest 20 videos from every configured source, removes duplicate video IDs,
-and writes each transcript into the output directory.
+and writes each transcript into a source-specific subdirectory of the output
+directory. YouTube channel URLs use the channel name without the leading `@`;
+for example, `https://www.youtube.com/@Channel` writes beneath
+`$TRANSCRIBER_OUTPUT_DIR/Channel`.
 
 Create a source file containing one URL per line. Blank lines and lines that
 begin with `#` are ignored:
@@ -38,4 +41,3 @@ transcription is not recorded and will be retried by the next run. The script
 uses `$TRANSCRIBER_STATE_DIR/poll.lock` to prevent concurrent polls; when a
 poll is already running, another invocation exits successfully without doing
 work.
-
