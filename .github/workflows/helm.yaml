@@ -1,0 +1,63 @@
+name: Helm chart validation
+
+on:
+  push:
+    paths:
+      - "charts/transcriber/**"
+      - "example-values.yaml"
+      - ".github/workflows/helm.yaml"
+  pull_request:
+    paths:
+      - "charts/transcriber/**"
+      - "example-values.yaml"
+      - ".github/workflows/helm.yaml"
+
+jobs:
+  lint-and-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart with example values
+        run: helm lint ./charts/transcriber -f example-values.yaml
+
+      - name: Render managed ConfigMap and PVC
+        run: |
+          mkdir -p .ci/helm-render
+          helm template transcriber ./charts/transcriber \
+            --namespace transcriber \
+            -f example-values.yaml > .ci/helm-render/managed.yaml
+
+      - name: Render existing ConfigMap, PVC, and extensions
+        run: |
+          helm template transcriber ./charts/transcriber \
+            --namespace transcriber \
+            --set image.tag=abc1234 \
+            --set sources.existingConfigMap=my-transcriber-sources \
+            --set persistence.existingClaim=transcriber-data \
+            --set-json 'transcriber.extraEnv=[{"name":"EXAMPLE","value":"true"}]' \
+            --set-json 'extraVolumes=[{"name":"example","emptyDir":{}}]' \
+            --set-json 'extraVolumeMounts=[{"name":"example","mountPath":"/example"}]' \
+            > .ci/helm-render/existing-resources.yaml
+
+      - name: Render ephemeral storage
+        run: |
+          helm template transcriber ./charts/transcriber \
+            --namespace transcriber \
+            --set image.tag=abc1234 \
+            --set sources.existingConfigMap=my-transcriber-sources \
+            --set persistence.enabled=false \
+            > .ci/helm-render/ephemeral.yaml
+
+      - name: Validate rendered resources
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: >-
+            -strict -summary
+            /github/workspace/.ci/helm-render/managed.yaml
+            /github/workspace/.ci/helm-render/existing-resources.yaml
+            /github/workspace/.ci/helm-render/ephemeral.yaml

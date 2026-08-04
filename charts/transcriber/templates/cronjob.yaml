@@ -1,0 +1,128 @@
+{{- include "transcriber.validateSources" . }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "transcriber.fullname" . }}
+  labels:
+    {{- include "transcriber.labels" . | nindent 4 }}
+    {{- with .Values.cronJobLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.cronJobAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  timeZone: {{ .Values.timeZone | quote }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy | quote }}
+  startingDeadlineSeconds: {{ .Values.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  suspend: {{ .Values.suspend }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "transcriber.labels" . | nindent 8 }}
+    spec:
+      backoffLimit: {{ .Values.job.backoffLimit }}
+      ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+      template:
+        metadata:
+          labels:
+            {{- include "transcriber.selectorLabels" . | nindent 12 }}
+            {{- with .Values.podLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: {{ .Values.restartPolicy }}
+          {{- $pullSecrets := concat .Values.image.pullSecrets .Values.imagePullSecrets }}
+          {{- if $pullSecrets }}
+          imagePullSecrets:
+            {{- toYaml $pullSecrets | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: transcriber
+              image: {{ printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              env:
+                - name: TRANSCRIBER_SOURCES
+                  value: /etc/transcriber/sources.txt
+                - name: TRANSCRIBER_STATE_DIR
+                  value: {{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.stateSubPath | quote }}
+                - name: TRANSCRIBER_OUTPUT_DIR
+                  value: {{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.outputSubPath | quote }}
+                - name: TRANSCRIBER_REQUEST_DELAY
+                  value: {{ .Values.transcriber.requestDelay | toString | quote }}
+                - name: TRANSCRIBER_VIDEO_DELAY
+                  value: {{ .Values.transcriber.videoDelay | toString | quote }}
+                - name: TRANSCRIBER_SCAN_LIMIT
+                  value: {{ .Values.transcriber.scanLimit | toString | quote }}
+                - name: HOME
+                  value: /tmp
+                - name: XDG_CACHE_HOME
+                  value: /tmp/.cache
+                {{- with .Values.transcriber.extraEnv }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              volumeMounts:
+                - name: sources
+                  mountPath: /etc/transcriber
+                  readOnly: true
+                - name: transcriber-data
+                  mountPath: {{ .Values.persistence.mountPath }}
+                {{- if .Values.tmp.enabled }}
+                - name: tmp
+                  mountPath: /tmp
+                {{- end }}
+                {{- with .Values.extraVolumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+          volumes:
+            - name: sources
+              configMap:
+                name: {{ .Values.sources.existingConfigMap | default (include "transcriber.sourcesConfigMapName" .) }}
+                items:
+                  - key: {{ .Values.sources.existingConfigMapKey | quote }}
+                    path: sources.txt
+            - name: transcriber-data
+              {{- if .Values.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ .Values.persistence.existingClaim | default (include "transcriber.persistenceClaimName" .) }}
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            {{- if .Values.tmp.enabled }}
+            - name: tmp
+              {{- if .Values.tmp.sizeLimit }}
+              emptyDir:
+                sizeLimit: {{ .Values.tmp.sizeLimit | quote }}
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            {{- end }}
+            {{- with .Values.extraVolumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}

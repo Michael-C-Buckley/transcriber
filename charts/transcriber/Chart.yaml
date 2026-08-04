@@ -1,0 +1,13 @@
+apiVersion: v2
+name: transcriber
+description: Scheduled YouTube subtitle polling and transcript generation
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/Michael-C-Buckley/transcriber
+sources:
+  - https://github.com/Michael-C-Buckley/transcriber
+keywords:
+  - youtube
+  - subtitles
+  - transcripts

@@ -1,0 +1,14 @@
+Transcriber CronJob {{ include "transcriber.fullname" . }} has been installed.
+
+Run it immediately with:
+  kubectl create job --namespace {{ .Release.Namespace }} \
+    --from=cronjob/{{ include "transcriber.fullname" . }} \
+    {{ include "transcriber.fullname" . }}-manual-$(date +%s)
+
+View recent Jobs with:
+  kubectl --namespace {{ .Release.Namespace }} get jobs --sort-by=.metadata.creationTimestamp
+
+View logs with:
+  kubectl --namespace {{ .Release.Namespace }} logs \
+    job/$(kubectl --namespace {{ .Release.Namespace }} get jobs \
+      --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}')

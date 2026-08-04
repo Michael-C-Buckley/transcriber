@@ -1,0 +1,11 @@
+image:
+  # Replace with the immutable Git SHA tag you pushed to GHCR.
+  tag: abc1234
+
+sources:
+  entries:
+    - https://www.youtube.com/@ExampleChannel/videos
+
+persistence:
+  storageClass: ceph-block
+  size: 10Gi
