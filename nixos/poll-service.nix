@@ -3,19 +3,17 @@
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.services.transcriber-poll;
 
   sourcesFile = pkgs.writeText "transcriber-sources" (lib.concatStringsSep "\n" cfg.sources);
-in
-{
+in {
   options.services.transcriber-poll = {
     enable = lib.mkEnableOption "periodic video transcript ingestion";
 
     sources = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ ];
+      default = [];
       description = "Channel and playlist URLs to inspect.";
     };
 
@@ -48,7 +46,7 @@ in
 
           WorkingDirectory = cfg.outputDirectory;
 
-          ExecStart = lib.getExe (pkgs.callPackage ../poller.nix { });
+          ExecStart = lib.getExe (pkgs.callPackage ../poller.nix {});
 
           Environment = [
             "TRANSCRIBER_STATE_DIR=/var/lib/transcriber"
@@ -73,7 +71,7 @@ in
       };
 
       timers.transcriber-poll = {
-        wantedBy = [ "timers.target" ];
+        wantedBy = ["timers.target"];
 
         timerConfig = {
           OnCalendar = cfg.calendar;
@@ -81,7 +79,7 @@ in
           RandomizedDelaySec = "10m";
         };
       };
-      
+
       tmpfiles.rules = [
         "d /var/lib/transcriber 0750 transcriber transcriber -"
         "d ${config.services.transcriber-poll.outputDirectory} 0750 transcriber transcriber -"
@@ -94,6 +92,6 @@ in
       home = "/var/lib/transcriber";
     };
 
-    users.groups.transcriber = { };
+    users.groups.transcriber = {};
   };
 }
