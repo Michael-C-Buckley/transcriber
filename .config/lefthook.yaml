@@ -33,7 +33,7 @@ pre-commit:
 
     - name: yamllint
       glob: "*.{yml,yaml}"
-      run: "yamllint {staged_files}"
+      run: "yamllint -c .config/yamllint.yaml {staged_files}"
 
     - name: shellcheck
       glob: "*.sh"

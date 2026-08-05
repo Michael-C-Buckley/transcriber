@@ -1,3 +1,4 @@
+---
 name: Helm chart validation
 
 on:
@@ -38,6 +39,7 @@ jobs:
             --namespace transcriber \
             --set image.tag=abc1234 \
             --set sources.existingConfigMap=my-transcriber-sources \
+            --set git.enabled=false \
             --set persistence.existingClaim=transcriber-data \
             --set-json 'transcriber.extraEnv=[{"name":"EXAMPLE","value":"true"}]' \
             --set-json 'extraVolumes=[{"name":"example","emptyDir":{}}]' \

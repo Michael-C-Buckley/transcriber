@@ -38,9 +38,9 @@ app.kubernetes.io/name: {{ include "transcriber.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/* Name of the chart-managed source ConfigMap. */}}
-{{- define "transcriber.sourcesConfigMapName" -}}
-{{- printf "%s-sources" (include "transcriber.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{/* Name of the chart-managed application ConfigMap. */}}
+{{- define "transcriber.configMapName" -}}
+{{- printf "%s-config" (include "transcriber.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/* Name of the chart-managed data PVC. */}}
@@ -56,5 +56,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- else if not .Values.sources.entries }}
 {{- fail "configure at least one sources.entries item or set sources.existingConfigMap" }}
+{{- end }}
+{{- if and .Values.git.enabled (not .Values.git.remote) }}
+{{- fail "git.remote must be set when git.enabled is true" }}
 {{- end }}
 {{- end }}

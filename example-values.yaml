@@ -1,3 +1,4 @@
+---
 image:
   # Replace with the immutable Git SHA tag you pushed to GHCR.
   tag: abc1234
@@ -7,6 +8,7 @@ sources:
     - https://www.youtube.com/@ExampleChannel/videos
 
 git:
+  enabled: true
   remote: git@github.com:example/transcripts.git
 
 persistence:

@@ -1,3 +1,4 @@
+---
 nameOverride: ""
 fullnameOverride: ""
 
@@ -37,8 +38,12 @@ transcriber:
   extraEnv: []
 
 git:
+  enabled: false
   remote: ""
   branch: main
+  commitMessage: Transcriber output
+  authorName: Transcriber
+  authorEmail: transcriber@localhost
 
 persistence:
   enabled: true

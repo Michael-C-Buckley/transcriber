@@ -64,6 +64,7 @@ in {
             "TRANSCRIBER_OUTPUT_DIR=${cfg.outputDirectory}"
             "TRANSCRIBER_SOURCES=${sourcesFile}"
             "TRANSCRIBER_SCAN_LIMIT=${toString cfg.scanLimit}"
+            "TRANSCRIBER_GIT_ENABLED=true"
             "TRANSCRIBER_GIT_REMOTE=${cfg.gitRemote}"
             "TRANSCRIBER_GIT_BRANCH=${cfg.gitBranch}"
           ];

@@ -67,22 +67,6 @@ spec:
               securityContext:
                 {{- toYaml .Values.containerSecurityContext | nindent 16 }}
               env:
-                - name: TRANSCRIBER_SOURCES
-                  value: /etc/transcriber/sources.txt
-                - name: TRANSCRIBER_STATE_DIR
-                  value: {{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.stateSubPath | quote }}
-                - name: TRANSCRIBER_OUTPUT_DIR
-                  value: {{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.outputSubPath | quote }}
-                - name: TRANSCRIBER_REQUEST_DELAY
-                  value: {{ .Values.transcriber.requestDelay | toString | quote }}
-                - name: TRANSCRIBER_VIDEO_DELAY
-                  value: {{ .Values.transcriber.videoDelay | toString | quote }}
-                - name: TRANSCRIBER_SCAN_LIMIT
-                  value: {{ .Values.transcriber.scanLimit | toString | quote }}
-                - name: TRANSCRIBER_GIT_REMOTE
-                  value: {{ required "git.remote must be set" .Values.git.remote | quote }}
-                - name: TRANSCRIBER_GIT_BRANCH
-                  value: {{ .Values.git.branch | quote }}
                 - name: HOME
                   value: /tmp
                 - name: XDG_CACHE_HOME
@@ -107,11 +91,18 @@ spec:
                 {{- end }}
           volumes:
             - name: sources
-              configMap:
-                name: {{ .Values.sources.existingConfigMap | default (include "transcriber.sourcesConfigMapName" .) }}
-                items:
-                  - key: {{ .Values.sources.existingConfigMapKey | quote }}
-                    path: sources.txt
+              projected:
+                sources:
+                  - configMap:
+                      name: {{ include "transcriber.configMapName" . }}
+                      items:
+                        - key: config
+                          path: config
+                  - configMap:
+                      name: {{ .Values.sources.existingConfigMap | default (include "transcriber.configMapName" .) }}
+                      items:
+                        - key: {{ .Values.sources.existingConfigMapKey | quote }}
+                          path: sources.txt
             - name: transcriber-data
               {{- if .Values.persistence.enabled }}
               persistentVolumeClaim:

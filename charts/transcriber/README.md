@@ -28,8 +28,8 @@ the immutable image tag they intend to run. `image.pullPolicy` defaults to
 
 ## Sources
 
-The chart-managed mode creates a ConfigMap from one URL per `sources.entries`
-item:
+The chart creates a ConfigMap containing `/etc/transcriber/config` and, in
+chart-managed mode, one URL per `sources.entries` item in `sources.txt`:
 
 ```yaml
 sources:
@@ -46,25 +46,29 @@ sources:
   existingConfigMapKey: sources.txt
 ```
 
-The mounted file is always `/etc/transcriber/sources.txt`. Blank lines and
-lines beginning with `#` are ignored by the poller. One of `sources.entries` or
+The source file is always mounted at `/etc/transcriber/sources.txt` alongside
+the generated application configuration. Blank lines and lines beginning with
+`#` are ignored by the poller. One of `sources.entries` or
 `sources.existingConfigMap` must be configured.
 
 ## Git output
 
-Set the remote repository that receives transcript output:
+Git synchronization is disabled by default. Enable it and set the remote
+repository that receives transcript output:
 
 ```yaml
 git:
+  enabled: true
   remote: git@github.com:example/transcripts.git
   branch: main
 ```
 
-The poller initializes the output repository if needed, pulls before each
-scan, commits as `Transcriber output`, and pushes after processing. A diverged
-local branch is reset to the remote. Supply push credentials using mounted SSH
-files or a Git credential helper; keep credentials in a Kubernetes Secret,
-not in `git.remote` or a values file.
+When enabled, the poller initializes the output repository if needed, pulls
+before each scan, commits, and pushes after processing. A diverged local branch
+is reset to the remote. `git.commitMessage`, `git.authorName`, and
+`git.authorEmail` configure generated commits. Supply push credentials using
+mounted SSH files or a Git credential helper; keep credentials in a Kubernetes
+Secret, not in `git.remote` or a values file.
 
 ## Persistence
 
@@ -115,11 +119,11 @@ The image is built to run as UID/GID `65532`. Keep `tmp.enabled: true` when
 using the default read-only root filesystem unless an additional writable
 runtime path is supplied.
 
-Application tuning is exposed through `transcriber.requestDelay`,
-`transcriber.videoDelay`, and `transcriber.scanLimit`. Additional environment
-entries, volumes, and mounts can be supplied through `transcriber.extraEnv`,
-`extraVolumes`, and `extraVolumeMounts`. Do not put credentials in values;
-future authentication should use Kubernetes Secrets or mounted files.
+Application tuning and Git settings are written to the mounted config file so
+the image stays deployment-agnostic. Additional environment entries, volumes,
+and mounts can be supplied through `transcriber.extraEnv`, `extraVolumes`, and
+`extraVolumeMounts`. Do not put credentials in values; authentication should
+use Kubernetes Secrets or mounted files.
 
 ## Manual Jobs and logs
 
@@ -183,8 +187,12 @@ before uninstalling if it must be retained.
 | `transcriber.requestDelay` | `1` | Delay between extractor requests |
 | `transcriber.videoDelay` | `10` | Delay between videos |
 | `transcriber.scanLimit` | `20` | Videos inspected per source |
-| `git.remote` | `""` | Required transcript output Git remote URL |
+| `git.enabled` | `false` | Pull, commit, and push transcript output with Git |
+| `git.remote` | `""` | Git remote URL; required when Git is enabled |
 | `git.branch` | `main` | Transcript output branch |
+| `git.commitMessage` | `Transcriber output` | Generated commit message |
+| `git.authorName` | `Transcriber` | Generated commit author name |
+| `git.authorEmail` | `transcriber@localhost` | Generated commit author email |
 | `persistence.enabled` | `true` | Use persistent storage |
 | `persistence.existingClaim` | `""` | Existing PVC name |
 | `persistence.storageClass` | `""` | Optional StorageClass name |

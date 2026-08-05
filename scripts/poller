@@ -1,15 +1,69 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-state_dir=${TRANSCRIBER_STATE_DIR:-/var/lib/transcriber}
-output_dir=${TRANSCRIBER_OUTPUT_DIR:-/var/lib/transcriber/output}
-sources_file=${TRANSCRIBER_SOURCES:-/etc/transcriber/sources.txt}
-request_delay=${TRANSCRIBER_REQUEST_DELAY:-1}
-video_delay=${TRANSCRIBER_VIDEO_DELAY:-10}
-scan_limit=${TRANSCRIBER_SCAN_LIMIT:-20}
-git_remote=${TRANSCRIBER_GIT_REMOTE:-}
-git_branch=${TRANSCRIBER_GIT_BRANCH:-main}
-git_commit_message=${TRANSCRIBER_GIT_COMMIT_MESSAGE:-Transcriber output}
+config_file=${TRANSCRIBER_CONFIG:-/etc/transcriber/config}
+
+declare -A config=()
+
+read_config() {
+  local line key value
+
+  [[ -r "$config_file" ]] || return 0
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Ignore comments and empty lines.
+    [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+
+    if [[ "$line" != *=* ]]; then
+      printf 'Invalid configuration line in %s: %s\n' \
+        "$config_file" "$line" >&2
+      return 1
+    fi
+
+    key=${line%%=*}
+    value=${line#*=}
+
+    # Trim surrounding whitespace from the key.
+    key=${key#"${key%%[![:space:]]*}"}
+    key=${key%"${key##*[![:space:]]}"}
+
+    case "$key" in
+      state_dir | output_dir | sources_file | request_delay | video_delay | scan_limit | git_enabled | git_remote | git_branch | git_author_name | git_author_email | git_commit_message)
+        config["$key"]=$value
+        ;;
+      *)
+        printf 'Unknown configuration key in %s: %s\n' \
+          "$config_file" "$key" >&2
+        return 1
+        ;;
+    esac
+  done < "$config_file"
+}
+
+read_config
+
+state_dir=${TRANSCRIBER_STATE_DIR:-${config[state_dir]:-/var/lib/transcriber}}
+output_dir=${TRANSCRIBER_OUTPUT_DIR:-${config[output_dir]:-/var/lib/transcriber/output}}
+sources_file=${TRANSCRIBER_SOURCES:-${config[sources_file]:-/etc/transcriber/sources.txt}}
+
+request_delay=${TRANSCRIBER_REQUEST_DELAY:-${config[request_delay]:-1}}
+video_delay=${TRANSCRIBER_VIDEO_DELAY:-${config[video_delay]:-10}}
+scan_limit=${TRANSCRIBER_SCAN_LIMIT:-${config[scan_limit]:-20}}
+
+git_enabled=${TRANSCRIBER_GIT_ENABLED:-${config[git_enabled]:-false}}
+git_remote=${TRANSCRIBER_GIT_REMOTE:-${config[git_remote]:-}}
+git_branch=${TRANSCRIBER_GIT_BRANCH:-${config[git_branch]:-main}}
+git_commit_message=${TRANSCRIBER_GIT_COMMIT_MESSAGE:-${config[git_commit_message]:-Transcriber output}}
+git_author_name=${TRANSCRIBER_GIT_AUTHOR_NAME:-${config[git_author_name]:-Transcriber}}
+git_author_email=${TRANSCRIBER_GIT_AUTHOR_EMAIL:-${config[git_author_email]:-transcriber@localhost}}
+
+case "$git_enabled" in
+  true | false) ;;
+  *)
+    printf 'git_enabled must be true or false, got: %s\n' "$git_enabled" >&2
+    exit 1
+    ;;
+esac
 
 archive="$state_dir/processed.txt"
 lock="$state_dir/poll.lock"
@@ -51,7 +105,7 @@ sync_output_repository() {
   elif [[ -n "$git_remote" ]]; then
     git -C "$output_dir" remote add origin "$git_remote"
   else
-    echo "TRANSCRIBER_GIT_REMOTE must be set when the output repository has no origin" >&2
+    echo "git_remote must be configured when the output repository has no origin" >&2
     return 1
   fi
 
@@ -98,10 +152,8 @@ sync_output_repository() {
     fi
   fi
 
-  git -C "$output_dir" config user.name \
-    "${TRANSCRIBER_GIT_AUTHOR_NAME:-Transcriber}"
-  git -C "$output_dir" config user.email \
-    "${TRANSCRIBER_GIT_AUTHOR_EMAIL:-transcriber@localhost}"
+  git -C "$output_dir" config user.name "$git_author_name"
+  git -C "$output_dir" config user.email "$git_author_email"
 }
 
 mkdir -p "$state_dir" "$output_dir"
@@ -114,7 +166,9 @@ if ! flock -n 9; then
   exit 0
 fi
 
-sync_output_repository
+if [[ "$git_enabled" == true ]]; then
+  sync_output_repository
+fi
 
 processed_this_run=$(mktemp "$state_dir/.processed-this-run.XXXXXX")
 trap 'rm -f "$processed_this_run"' EXIT
@@ -168,20 +222,23 @@ done < "$sources_file" |
     done
   }
 
-git -C "$output_dir" add -A
-if git -C "$output_dir" diff --cached --quiet; then
-  echo "No transcript changes to commit"
-else
-  # Scheduled jobs cannot satisfy interactive GPG or hardware-key prompts from
-  # a host-level Git configuration.
-  git -C "$output_dir" -c commit.gpgSign=false commit -m "$git_commit_message"
+if [[ "$git_enabled" == true ]]; then
+  git -C "$output_dir" add -A
+  if git -C "$output_dir" diff --cached --quiet; then
+    echo "No transcript changes to commit"
+  else
+    # Scheduled jobs cannot satisfy interactive GPG or hardware-key prompts
+    # from a host-level Git configuration.
+    git -C "$output_dir" -c commit.gpgSign=false commit -m "$git_commit_message"
+  fi
+
+  # Push even when this run produced no commit. This retries a commit left
+  # ahead by an earlier run whose push failed.
+  git -C "$output_dir" push --set-upstream origin "$git_branch"
 fi
 
-# Push even when this run produced no commit. This retries a commit left ahead
-# by an earlier run whose push failed.
-git -C "$output_dir" push --set-upstream origin "$git_branch"
-
-# Only suppress future processing after its output is safely on the remote.
+# With Git enabled, only suppress future processing after its output is safely
+# on the remote. Otherwise, successful local output is sufficient.
 if [[ -s "$processed_this_run" ]]; then
   cat "$processed_this_run" >> "$archive"
 fi

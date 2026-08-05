@@ -1,12 +1,25 @@
 {{- include "transcriber.validateSources" . }}
-{{- if not .Values.sources.existingConfigMap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "transcriber.sourcesConfigMapName" . }}
+  name: {{ include "transcriber.configMapName" . }}
   labels:
     {{- include "transcriber.labels" . | nindent 4 }}
 data:
+  config: |-
+    state_dir={{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.stateSubPath }}
+    output_dir={{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.outputSubPath }}
+    sources_file=/etc/transcriber/sources.txt
+    request_delay={{ .Values.transcriber.requestDelay }}
+    video_delay={{ .Values.transcriber.videoDelay }}
+    scan_limit={{ .Values.transcriber.scanLimit }}
+    git_enabled={{ .Values.git.enabled }}
+    git_remote={{ .Values.git.remote }}
+    git_branch={{ .Values.git.branch }}
+    git_commit_message={{ .Values.git.commitMessage }}
+    git_author_name={{ .Values.git.authorName }}
+    git_author_email={{ .Values.git.authorEmail }}
+{{- if not .Values.sources.existingConfigMap }}
   sources.txt: |-
 {{- range .Values.sources.entries }}
     {{ . }}

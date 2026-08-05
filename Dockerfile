@@ -31,9 +31,6 @@ FROM scratch
 COPY --from=builder /runtime/ /
 COPY --from=builder /build/result /app
 
-ENV TRANSCRIBER_SOURCES=/etc/transcriber/sources.txt
-ENV TRANSCRIBER_STATE_DIR=/var/lib/transcriber/state
-ENV TRANSCRIBER_OUTPUT_DIR=/var/lib/transcriber/output
 ENV TMPDIR=/tmp
 
 VOLUME ["/var/lib/transcriber"]
