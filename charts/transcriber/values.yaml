@@ -36,6 +36,10 @@ transcriber:
   scanLimit: 20
   extraEnv: []
 
+git:
+  remote: ""
+  branch: main
+
 persistence:
   enabled: true
   existingClaim: ""

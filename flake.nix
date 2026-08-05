@@ -28,6 +28,7 @@
         default = self.packages.${system}.transcriber;
         transcriber = pkgs.callPackage ./transcriber.nix {};
         poller = pkgs.callPackage ./poller.nix {};
+        ytdlp-slim = pkgs.yt-dlp;
       }
     );
     devShells = forAllSystems (system: {

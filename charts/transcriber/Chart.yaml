@@ -3,8 +3,8 @@ name: transcriber
 kubeVersion: ">=1.27.0-0"
 description: Scheduled YouTube subtitle polling and transcript generation
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"
 home: https://github.com/Michael-C-Buckley/transcriber
 sources:
   - https://github.com/Michael-C-Buckley/transcriber

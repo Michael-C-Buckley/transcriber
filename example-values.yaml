@@ -6,6 +6,9 @@ sources:
   entries:
     - https://www.youtube.com/@ExampleChannel/videos
 
+git:
+  remote: git@github.com:example/transcripts.git
+
 persistence:
   storageClass: ceph-block
   size: 10Gi

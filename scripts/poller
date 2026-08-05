@@ -7,6 +7,9 @@ sources_file=${TRANSCRIBER_SOURCES:-/etc/transcriber/sources.txt}
 request_delay=${TRANSCRIBER_REQUEST_DELAY:-1}
 video_delay=${TRANSCRIBER_VIDEO_DELAY:-10}
 scan_limit=${TRANSCRIBER_SCAN_LIMIT:-20}
+git_remote=${TRANSCRIBER_GIT_REMOTE:-}
+git_branch=${TRANSCRIBER_GIT_BRANCH:-main}
+git_commit_message=${TRANSCRIBER_GIT_COMMIT_MESSAGE:-Transcriber output}
 
 archive="$state_dir/processed.txt"
 lock="$state_dir/poll.lock"
@@ -27,6 +30,80 @@ source_directory() {
   printf '%s\n' "$path"
 }
 
+sync_output_repository() {
+  local ahead behind configured_remote
+
+  if ! git check-ref-format --branch "$git_branch" >/dev/null; then
+    echo "Invalid Git branch name: $git_branch" >&2
+    return 1
+  fi
+
+  if ! git -C "$output_dir" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "Initializing Git repository in $output_dir"
+    git -C "$output_dir" init --initial-branch="$git_branch"
+  fi
+
+  if git -C "$output_dir" remote get-url origin >/dev/null 2>&1; then
+    configured_remote=$(git -C "$output_dir" remote get-url origin)
+    if [[ -n "$git_remote" && "$configured_remote" != "$git_remote" ]]; then
+      git -C "$output_dir" remote set-url origin "$git_remote"
+    fi
+  elif [[ -n "$git_remote" ]]; then
+    git -C "$output_dir" remote add origin "$git_remote"
+  else
+    echo "TRANSCRIBER_GIT_REMOTE must be set when the output repository has no origin" >&2
+    return 1
+  fi
+
+  git -C "$output_dir" fetch --prune origin
+
+  if git -C "$output_dir" show-ref --verify --quiet "refs/remotes/origin/$git_branch"; then
+    # The remote is canonical at the start of a run. Discard output left by an
+    # interrupted run so it cannot obstruct checkout or become a later commit.
+    if git -C "$output_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+      git -C "$output_dir" reset --hard HEAD
+    fi
+    git -C "$output_dir" clean -fd
+
+    if git -C "$output_dir" show-ref --verify --quiet "refs/heads/$git_branch"; then
+      git -C "$output_dir" checkout "$git_branch"
+    else
+      git -C "$output_dir" checkout --track -b "$git_branch" "origin/$git_branch"
+    fi
+
+    read -r ahead behind < <(
+      git -C "$output_dir" rev-list --left-right --count \
+        "HEAD...origin/$git_branch"
+    )
+    if (( ahead > 0 && behind > 0 )); then
+      echo "Local and remote branches diverged; replacing local $git_branch with origin/$git_branch"
+      git -C "$output_dir" reset --hard "origin/$git_branch"
+    fi
+
+    # Pull on every run, including after a divergence reset. A local branch
+    # that is only ahead is retained so a previously committed push can retry.
+    git -C "$output_dir" pull --ff-only origin "$git_branch"
+  else
+    echo "Remote branch origin/$git_branch does not exist; it will be created on push"
+    # Preserve pre-existing output when initializing against an empty remote,
+    # but clean remnants if this repository already has committed history.
+    if git -C "$output_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+      git -C "$output_dir" reset --hard HEAD
+      git -C "$output_dir" clean -fd
+    fi
+    if git -C "$output_dir" show-ref --verify --quiet "refs/heads/$git_branch"; then
+      git -C "$output_dir" checkout "$git_branch"
+    else
+      git -C "$output_dir" checkout -b "$git_branch"
+    fi
+  fi
+
+  git -C "$output_dir" config user.name \
+    "${TRANSCRIBER_GIT_AUTHOR_NAME:-Transcriber}"
+  git -C "$output_dir" config user.email \
+    "${TRANSCRIBER_GIT_AUTHOR_EMAIL:-transcriber@localhost}"
+}
+
 mkdir -p "$state_dir" "$output_dir"
 touch "$archive"
 
@@ -36,6 +113,11 @@ if ! flock -n 9; then
   echo "A transcriber poll is already running"
   exit 0
 fi
+
+sync_output_repository
+
+processed_this_run=$(mktemp "$state_dir/.processed-this-run.XXXXXX")
+trap 'rm -f "$processed_this_run"' EXIT
 
 while IFS= read -r source || [[ -n "$source" ]]; do
   # Ignore blank lines and comments.
@@ -79,9 +161,27 @@ done < "$sources_file" |
         cd "$output_dir/$source_dir"
         transcriber "$video_url"
       ); then
-        printf '%s\n' "$video_id" >> "$archive"
+        printf '%s\n' "$video_id" >> "$processed_this_run"
       else
         echo "Failed to process $video_id" >&2
       fi
     done
   }
+
+git -C "$output_dir" add -A
+if git -C "$output_dir" diff --cached --quiet; then
+  echo "No transcript changes to commit"
+else
+  # Scheduled jobs cannot satisfy interactive GPG or hardware-key prompts from
+  # a host-level Git configuration.
+  git -C "$output_dir" -c commit.gpgSign=false commit -m "$git_commit_message"
+fi
+
+# Push even when this run produced no commit. This retries a commit left ahead
+# by an earlier run whose push failed.
+git -C "$output_dir" push --set-upstream origin "$git_branch"
+
+# Only suppress future processing after its output is safely on the remote.
+if [[ -s "$processed_this_run" ]]; then
+  cat "$processed_this_run" >> "$archive"
+fi

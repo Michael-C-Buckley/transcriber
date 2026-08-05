@@ -50,6 +50,22 @@ The mounted file is always `/etc/transcriber/sources.txt`. Blank lines and
 lines beginning with `#` are ignored by the poller. One of `sources.entries` or
 `sources.existingConfigMap` must be configured.
 
+## Git output
+
+Set the remote repository that receives transcript output:
+
+```yaml
+git:
+  remote: git@github.com:example/transcripts.git
+  branch: main
+```
+
+The poller initializes the output repository if needed, pulls before each
+scan, commits as `Transcriber output`, and pushes after processing. A diverged
+local branch is reset to the remote. Supply push credentials using mounted SSH
+files or a Git credential helper; keep credentials in a Kubernetes Secret,
+not in `git.remote` or a values file.
+
 ## Persistence
 
 By default the chart creates a `ReadWriteOnce` PVC named after the release,
@@ -167,6 +183,8 @@ before uninstalling if it must be retained.
 | `transcriber.requestDelay` | `1` | Delay between extractor requests |
 | `transcriber.videoDelay` | `10` | Delay between videos |
 | `transcriber.scanLimit` | `20` | Videos inspected per source |
+| `git.remote` | `""` | Required transcript output Git remote URL |
+| `git.branch` | `main` | Transcript output branch |
 | `persistence.enabled` | `true` | Use persistent storage |
 | `persistence.existingClaim` | `""` | Existing PVC name |
 | `persistence.storageClass` | `""` | Optional StorageClass name |

@@ -6,7 +6,9 @@ pkgs.writeShellApplication {
       (pkgs)
       coreutils
       gawk
+      git
       gnugrep
+      openssh
       util-linux
       yt-dlp
       ;

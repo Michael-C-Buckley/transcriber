@@ -29,6 +29,7 @@ Import the module from this flake and configure one or more sources:
 						];
 						calendar = "daily";
 						outputDirectory = "/var/lib/transcriber/output";
+						gitRemote = "git@github.com:example/transcripts.git";
 					};
 				}
 			];
@@ -46,6 +47,11 @@ The service stores its lock file and processed-video archive in
 Its output is in `outputDirectory`, with one directory per video containing
 the downloaded subtitle file, metadata, and the generated `transcript.txt`
 and `transcript.md` files.
+
+The service pulls `gitBranch` (`main` by default) before processing and pushes
+a `Transcriber output` commit afterward. Configure authentication for the
+`transcriber` system user; an unreachable remote or failed authentication
+causes the run to fail without recording newly processed video IDs.
 
 After rebuilding the NixOS configuration, inspect or run the service with:
 

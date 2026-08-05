@@ -22,6 +22,17 @@ in {
       default = "/var/lib/transcriber/output";
     };
 
+    gitRemote = lib.mkOption {
+      type = lib.types.str;
+      description = "Git remote URL used to pull and push transcript output.";
+    };
+
+    gitBranch = lib.mkOption {
+      type = lib.types.str;
+      default = "main";
+      description = "Git branch used for transcript output.";
+    };
+
     scanLimit = lib.mkOption {
       type = lib.types.ints.positive;
       default = 20;
@@ -53,6 +64,8 @@ in {
             "TRANSCRIBER_OUTPUT_DIR=${cfg.outputDirectory}"
             "TRANSCRIBER_SOURCES=${sourcesFile}"
             "TRANSCRIBER_SCAN_LIMIT=${toString cfg.scanLimit}"
+            "TRANSCRIBER_GIT_REMOTE=${cfg.gitRemote}"
+            "TRANSCRIBER_GIT_BRANCH=${cfg.gitBranch}"
           ];
 
           User = "transcriber";
