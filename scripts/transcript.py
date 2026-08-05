@@ -158,10 +158,13 @@ def main() -> None:
     output_directory = args.input.parent
 
     plain = "\n\n".join(text for _, text in paragraphs) + "\n"
-    markdown = "\n\n".join(
-        f"**[{display_timestamp(timestamp)}]** {text}"
-        for timestamp, text in paragraphs
-    ) + "\n"
+    markdown = (
+        "\n\n".join(
+            f"**[{display_timestamp(timestamp)}]** {text}"
+            for timestamp, text in paragraphs
+        )
+        + "\n"
+    )
 
     (output_directory / "transcript.txt").write_text(
         plain,

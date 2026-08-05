@@ -11,7 +11,6 @@ pkgs.mkShellNoCC {
       # Nix
       alejandra
       deadnix
-      statix
       nil
 
       # Yaml
@@ -21,7 +20,7 @@ pkgs.mkShellNoCC {
       # Formatting
       mdformat
       shfmt
-      treefmt
+      ruff
 
       # Hooks
       lefthook

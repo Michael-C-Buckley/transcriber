@@ -1,0 +1,43 @@
+---
+assert_lefthook_installed: true
+
+pre-commit:
+  jobs:
+    - name: alejandra
+      glob: "*.nix"
+      run: "alejandra {staged_files}"
+      stage_fixed: true
+
+    - name: ruff
+      glob: "*.py"
+      run: "ruff format {staged_files}"
+      stage_fixed: true
+
+    - name: mdformat
+      glob: "*.md"
+      run: "mdformat {staged_files}"
+      stage_fixed: true
+
+    - name: yamlfmt
+      glob: "*.{yml,yaml}"
+      run: "yamlfmt -conf .config/yamlfmt.yaml {staged_files}"
+      stage_fixed: true
+
+    - name: deadnix
+      glob: "*.nix"
+      run: "deadnix --fail {staged_files}"
+
+    - name: nil
+      glob: "*.nix"
+      run: "nil diagnostics --deny-warnings {staged_files}"
+
+    - name: yamllint
+      glob: "*.{yml,yaml}"
+      run: "yamllint {staged_files}"
+
+    - name: shellcheck
+      glob: "*.sh"
+      run: "shellcheck {staged_files}"
+
+    - name: typos
+      run: "typos"
