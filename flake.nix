@@ -30,6 +30,9 @@
         poller = pkgs.callPackage ./poller.nix {};
       }
     );
+    devShells = forAllSystems (system: {
+      default = import ./shell.nix {pkgs = nixpkgsFor.${system};};
+    });
 
     nixosModules.poll-service = ./nixos/poll-service.nix;
   };

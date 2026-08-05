@@ -54,7 +54,7 @@ jobs:
             > .ci/helm-render/ephemeral.yaml
 
       - name: Validate rendered resources
-        uses: docker://ghcr.io/yannh/kubeconform:latest
+        uses: docker://ghcr.io/yannh/kubeconform:v0.8.0
         with:
           args: >-
             -strict -summary
