@@ -9,7 +9,8 @@ sources:
 
 git:
   enabled: true
-  remote: git@github.com:example/transcripts.git
+  remote: https://github.com/example/transcripts.git
+  existingSecret: transcriber-git
 
 persistence:
   storageClass: ceph-block

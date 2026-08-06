@@ -59,6 +59,11 @@ be overridden by its uppercase `TRANSCRIBER_` equivalent; for example,
 When enabled, `git_remote` is required only if the output repository does not
 already have an `origin` remote.
 
+For unattended HTTPS authentication, set `TRANSCRIBER_GIT_TOKEN` to a personal
+access token with write access to the output repository. The optional
+`TRANSCRIBER_GIT_USERNAME` defaults to `x-access-token`. These credentials are
+environment-only settings and cannot be placed in the configuration file.
+
 Successful video IDs are appended to `processed.txt` after local output is
 written, or after a successful push when Git is enabled. A failed transcription,
 commit, or push is not recorded and will be retried. The script uses `poll.lock`

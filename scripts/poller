@@ -57,6 +57,11 @@ git_commit_message=${TRANSCRIBER_GIT_COMMIT_MESSAGE:-${config[git_commit_message
 git_author_name=${TRANSCRIBER_GIT_AUTHOR_NAME:-${config[git_author_name]:-Transcriber}}
 git_author_email=${TRANSCRIBER_GIT_AUTHOR_EMAIL:-${config[git_author_email]:-transcriber@localhost}}
 
+if [[ -n "${TRANSCRIBER_GIT_TOKEN:-}" ]]; then
+  export GIT_ASKPASS=transcriber-git-askpass
+  export GIT_TERMINAL_PROMPT=0
+fi
+
 case "$git_enabled" in
   true | false) ;;
   *)

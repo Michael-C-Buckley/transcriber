@@ -60,4 +60,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if and .Values.git.enabled (not .Values.git.remote) }}
 {{- fail "git.remote must be set when git.enabled is true" }}
 {{- end }}
+{{- if and .Values.git.existingSecret (not .Values.git.tokenKey) }}
+{{- fail "git.tokenKey must be set when git.existingSecret is used" }}
+{{- end }}
 {{- end }}

@@ -10,8 +10,15 @@ The chart does not create a Service, Ingress, Namespace, or ServiceAccount.
 
 ## Install
 
-Build and publish the image with an immutable Git SHA tag, then set that tag in
-your values. A ready-to-edit example is in `example-values.yaml`:
+Push to `main` or a `v*` tag to build and publish the image to GHCR. The
+workflow publishes the full Git commit SHA as an immutable tag; `main` also
+updates `latest`, and a version tag such as `v0.4.0` publishes the `0.4.0`
+image tag. Set the immutable SHA tag in your values. A ready-to-edit example is
+in `example-values.yaml`:
+
+The publishing workflow uses its automatic `GITHUB_TOKEN` with `packages: write`; it does not require a personal access token. After the first publish,
+make the GHCR package public for anonymous cluster pulls, or configure
+`image.pullSecrets` for a private package.
 
 ```sh
 helm upgrade --install transcriber ./charts/transcriber \
@@ -59,16 +66,29 @@ repository that receives transcript output:
 ```yaml
 git:
   enabled: true
-  remote: git@github.com:example/transcripts.git
+  remote: https://github.com/example/transcripts.git
   branch: main
+  existingSecret: transcriber-git
 ```
 
 When enabled, the poller initializes the output repository if needed, pulls
 before each scan, commits, and pushes after processing. A diverged local branch
 is reset to the remote. `git.commitMessage`, `git.authorName`, and
-`git.authorEmail` configure generated commits. Supply push credentials using
-mounted SSH files or a Git credential helper; keep credentials in a Kubernetes
-Secret, not in `git.remote` or a values file.
+`git.authorEmail` configure generated commits.
+
+For GitHub HTTPS authentication, create a fine-grained personal access token
+limited to the transcript repository with repository Contents read/write. Put
+the token in a Kubernetes Secret instead of the remote URL or values file:
+
+```sh
+kubectl --namespace transcriber create secret generic transcriber-git \
+  --from-literal=token="$TRANSCRIBER_GIT_TOKEN"
+```
+
+Set `git.existingSecret` to that Secret's name. `git.tokenKey` selects the
+Secret key (`token` by default), and `git.username` defaults to
+`x-access-token`. The chart passes the token through a Secret-backed environment
+variable used by Git's non-interactive credential helper.
 
 ## Persistence
 
@@ -193,6 +213,9 @@ before uninstalling if it must be retained.
 | `git.commitMessage` | `Transcriber output` | Generated commit message |
 | `git.authorName` | `Transcriber` | Generated commit author name |
 | `git.authorEmail` | `transcriber@localhost` | Generated commit author email |
+| `git.username` | `x-access-token` | HTTPS Git username |
+| `git.existingSecret` | `""` | Secret containing the HTTPS Git token |
+| `git.tokenKey` | `token` | Token key in `git.existingSecret` |
 | `persistence.enabled` | `true` | Use persistent storage |
 | `persistence.existingClaim` | `""` | Existing PVC name |
 | `persistence.storageClass` | `""` | Optional StorageClass name |

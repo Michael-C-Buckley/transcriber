@@ -71,6 +71,15 @@ spec:
                   value: /tmp
                 - name: XDG_CACHE_HOME
                   value: /tmp/.cache
+                {{- if .Values.git.existingSecret }}
+                - name: TRANSCRIBER_GIT_USERNAME
+                  value: {{ .Values.git.username | quote }}
+                - name: TRANSCRIBER_GIT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.git.existingSecret | quote }}
+                      key: {{ .Values.git.tokenKey | quote }}
+                {{- end }}
                 {{- with .Values.transcriber.extraEnv }}
                 {{- toYaml . | nindent 16 }}
                 {{- end }}
