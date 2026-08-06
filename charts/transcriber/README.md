@@ -207,7 +207,7 @@ before uninstalling if it must be retained.
 | `sources.existingConfigMap` | `""` | Existing source ConfigMap name |
 | `transcriber.requestDelay` | `1` | Delay between extractor requests |
 | `transcriber.videoDelay` | `10` | Delay between videos |
-| `transcriber.scanLimit` | `20` | Videos inspected per source |
+| `transcriber.scanLimit` | `20` | Videos inspected per existing source; new sources scan their full history |
 | `git.enabled` | `false` | Pull, commit, and push transcript output with Git |
 | `git.remote` | `""` | Git remote URL; required when Git is enabled |
 | `git.branch` | `main` | Transcript output branch |

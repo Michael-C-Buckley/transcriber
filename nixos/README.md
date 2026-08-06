@@ -5,7 +5,8 @@ channels and playlists for new videos, then transcribes videos that have not
 previously completed successfully. Each run:
 
 - reads the configured channel or playlist URLs;
-- examines the newest 20 videos from each source;
+- examines the full history of sources without an output directory and the
+  newest 20 videos from existing sources;
 - de-duplicates videos that appear in more than one source;
 - writes each transcript below the configured output directory; and
 - records successfully processed video IDs so later runs skip them.

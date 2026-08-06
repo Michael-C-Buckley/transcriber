@@ -184,15 +184,22 @@ while IFS= read -r source || [[ -n "$source" ]]; do
 
   source_dir=$(source_directory "$source")
 
-  yt-dlp \
-    --ignore-config \
-    --flat-playlist \
-    --playlist-end "$scan_limit" \
-    --sleep-requests "$request_delay" \
-    --retry-sleep 'extractor:exp=2:30' \
-    --retry-sleep 'http:exp=2:30' \
-    --print $'%(id)s\t%(webpage_url)s' \
-    "$source" |
+  yt_dlp_args=(
+    --ignore-config
+    --flat-playlist
+    --sleep-requests "$request_delay"
+    --retry-sleep 'extractor:exp=2:30'
+    --retry-sleep 'http:exp=2:30'
+    --print $'%(id)s\t%(webpage_url)s'
+  )
+
+  if [[ -d "$output_dir/$source_dir" ]]; then
+    yt_dlp_args+=(--playlist-end "$scan_limit")
+  else
+    echo "Discovering full history for new source: $source" >&2
+  fi
+
+  yt-dlp "${yt_dlp_args[@]}" "$source" |
     while IFS=$'\t' read -r video_id video_url; do
       printf '%s\t%s\t%s\n' "$video_id" "$video_url" "$source_dir"
     done

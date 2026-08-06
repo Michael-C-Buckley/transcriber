@@ -36,6 +36,10 @@ in {
     scanLimit = lib.mkOption {
       type = lib.types.ints.positive;
       default = 20;
+      description = ''
+        Number of recent videos inspected for an existing source. Sources
+        without an output directory have their full history inspected.
+      '';
     };
 
     calendar = lib.mkOption {

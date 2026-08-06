@@ -1,12 +1,13 @@
 ## Poller
 
-`poller` discovers recent videos from YouTube channel and playlist URLs, then
-runs `transcriber` for videos it has not already processed. It inspects the
-newest 20 videos from every configured source, removes duplicate video IDs,
-and writes each transcript into a source-specific subdirectory of the output
-directory. YouTube channel URLs use the channel name without the leading `@`;
-for example, `https://www.youtube.com/@Channel` writes beneath
-`$TRANSCRIBER_OUTPUT_DIR/Channel`.
+`poller` discovers videos from YouTube channel and playlist URLs, then runs
+`transcriber` for videos it has not already processed. For a new source whose
+output directory does not exist, it inspects the full video history. Later runs
+inspect only the newest 20 videos (or the configured `scan_limit`). It removes
+duplicate video IDs and writes each transcript into a source-specific
+subdirectory of the output directory. YouTube channel URLs use the channel name
+without the leading `@`; for example, `https://www.youtube.com/@Channel` writes
+beneath `$TRANSCRIBER_OUTPUT_DIR/Channel`.
 
 Git synchronization is optional. When enabled, the poller initializes the
 output directory as a repository when necessary, fetches and pulls the
