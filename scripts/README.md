@@ -28,6 +28,13 @@ Run the packaged script with a configuration file:
 TRANSCRIBER_CONFIG="$PWD/config" nix run .#poller
 ```
 
+To run one poll locally with this checkout's existing `sources.txt`, `output/`,
+and `state/` directories, with Git synchronization disabled, run:
+
+```sh
+./scripts/run-local-poller
+```
+
 The file uses `key=value` lines. Blank lines and lines beginning with `#` are
 ignored. Environment variables remain available as overrides for compatibility:
 
