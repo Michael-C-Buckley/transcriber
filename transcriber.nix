@@ -1,6 +1,6 @@
 {pkgs}: let
   inherit (pkgs.lib) getExe;
-  inherit (pkgs) yt-dlp python3;
+  inherit (pkgs) yt-dlp python3 quickjs-ng;
 in
   pkgs.writeShellApplication {
     name = "transcriber";
@@ -9,6 +9,8 @@ in
 
       # Fetch the desired video source
       output="$(${getExe yt-dlp} \
+        --js-runtimes "quickjs:${getExe quickjs-ng}" \
+        --format b \
         --no-simulate \
         --no-playlist \
         --skip-download \
