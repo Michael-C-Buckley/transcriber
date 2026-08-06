@@ -43,6 +43,19 @@ To manually retry only the video IDs in
 ./scripts/run-local-missing-subtitles
 ```
 
+## Container publishing
+
+Build and publish the `linux/amd64` and `linux/arm64` images to GHCR with the
+full current Git commit SHA and `latest` tags:
+
+```sh
+GHCR_TOKEN=github_pat_... ./scripts/push-container
+```
+
+The token must have `write:packages` permission (and repository access if the
+package is private). Cross-platform builds require Podman to have a working
+QEMU/binfmt setup for the non-native target architecture.
+
 This manual retry scans the full history of the configured sources so older
 IDs can be found, but invokes the transcriber only for IDs in the missing-
 subtitle state file. A successful retry moves the ID to `processed.txt` and

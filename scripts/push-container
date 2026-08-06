@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+## Imperative build script I use when Actions are down
+set -euo pipefail
+
+repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+image=ghcr.io/michael-c-buckley/transcriber
+sha=$(git -C "$repository_root" rev-parse HEAD)
+manifest="$image:$sha"
+
+: "${GHCR_TOKEN:?GHCR_TOKEN must contain a GitHub token with write:packages permission}"
+
+printf '%s' "$GHCR_TOKEN" | podman login ghcr.io \
+  --username Michael-C-Buckley \
+  --password-stdin
+
+podman manifest rm "$manifest" 2>/dev/null || true
+podman image untag "$manifest" 2>/dev/null || true
+podman manifest create "$manifest"
+
+platform_image="$image:$sha-amd64"
+
+podman build \
+  --platform linux/amd64 \
+  --tag "$platform_image" \
+  "$repository_root"
+
+podman manifest add "$manifest" "$platform_image"
+
+podman manifest push --all "$manifest" "docker://$image:$sha"
+podman manifest push --all "$manifest" "docker://$image:latest"
