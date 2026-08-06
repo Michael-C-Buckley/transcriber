@@ -49,6 +49,7 @@ sources_file=${TRANSCRIBER_SOURCES:-${config[sources_file]:-/etc/transcriber/sou
 request_delay=${TRANSCRIBER_REQUEST_DELAY:-${config[request_delay]:-1}}
 video_delay=${TRANSCRIBER_VIDEO_DELAY:-${config[video_delay]:-10}}
 scan_limit=${TRANSCRIBER_SCAN_LIMIT:-${config[scan_limit]:-20}}
+retry_missing_subtitles=${TRANSCRIBER_RETRY_MISSING_SUBTITLES:-false}
 
 git_enabled=${TRANSCRIBER_GIT_ENABLED:-${config[git_enabled]:-false}}
 git_remote=${TRANSCRIBER_GIT_REMOTE:-${config[git_remote]:-}}
@@ -62,15 +63,19 @@ if [[ -n "${TRANSCRIBER_GIT_TOKEN:-}" ]]; then
   export GIT_TERMINAL_PROMPT=0
 fi
 
-case "$git_enabled" in
-  true | false) ;;
-  *)
-    printf 'git_enabled must be true or false, got: %s\n' "$git_enabled" >&2
-    exit 1
-    ;;
-esac
+for boolean_setting in git_enabled retry_missing_subtitles; do
+  case "${!boolean_setting}" in
+    true | false) ;;
+    *)
+      printf '%s must be true or false, got: %s\n' \
+        "$boolean_setting" "${!boolean_setting}" >&2
+      exit 1
+      ;;
+  esac
+done
 
 archive="$state_dir/processed.txt"
+missing_subtitles_archive="$state_dir/missing-english-subtitles.txt"
 lock="$state_dir/poll.lock"
 
 source_directory() {
@@ -162,7 +167,7 @@ sync_output_repository() {
 }
 
 mkdir -p "$state_dir" "$output_dir"
-touch "$archive"
+touch "$archive" "$missing_subtitles_archive"
 
 exec 9>"$lock"
 
@@ -171,12 +176,20 @@ if ! flock -n 9; then
   exit 0
 fi
 
+if [[ "$retry_missing_subtitles" == true && ! -s "$missing_subtitles_archive" ]]; then
+  echo "No videos with missing English subtitles to retry"
+  exit 0
+fi
+
 if [[ "$git_enabled" == true ]]; then
   sync_output_repository
 fi
 
 processed_this_run=$(mktemp "$state_dir/.processed-this-run.XXXXXX")
-trap 'rm -f "$processed_this_run"' EXIT
+retried_missing_this_run=$(mktemp "$state_dir/.retried-missing-this-run.XXXXXX")
+transcriber_error=$(mktemp "$state_dir/.transcriber-error.XXXXXX")
+remaining_missing_subtitles=$(mktemp "$state_dir/.remaining-missing-subtitles.XXXXXX")
+trap 'rm -f "$processed_this_run" "$retried_missing_this_run" "$transcriber_error" "$remaining_missing_subtitles"' EXIT
 
 while IFS= read -r source || [[ -n "$source" ]]; do
   # Ignore blank lines and comments.
@@ -193,7 +206,9 @@ while IFS= read -r source || [[ -n "$source" ]]; do
     --print $'%(id)s\t%(webpage_url)s'
   )
 
-  if [[ -d "$output_dir/$source_dir" ]]; then
+  if [[ "$retry_missing_subtitles" == true ]]; then
+    echo "Discovering full history to find manual retries: $source" >&2
+  elif [[ -d "$output_dir/$source_dir" ]]; then
     yt_dlp_args+=(--playlist-end "$scan_limit")
   else
     echo "Discovering full history for new source: $source" >&2
@@ -210,8 +225,19 @@ done < "$sources_file" |
     while IFS=$'\t' read -r video_id video_url source_dir; do
       [[ -z "$video_id" || -z "$video_url" || -z "$source_dir" ]] && continue
 
+      if [[ "$retry_missing_subtitles" == true ]] && \
+        ! grep -Fqx -- "$video_id" "$missing_subtitles_archive"; then
+        continue
+      fi
+
       if grep -Fqx -- "$video_id" "$archive"; then
         echo "Already processed: $video_id"
+        continue
+      fi
+
+      if [[ "$retry_missing_subtitles" == false ]] && \
+        grep -Fqx -- "$video_id" "$missing_subtitles_archive"; then
+        echo "Skipping video without English subtitles: $video_id"
         continue
       fi
 
@@ -220,15 +246,31 @@ done < "$sources_file" |
       fi
       first_video=false
 
-      echo "Processing $video_id: $video_url"
+      if [[ "$retry_missing_subtitles" == true ]]; then
+        echo "Retrying $video_id: $video_url"
+      else
+        echo "Processing $video_id: $video_url"
+      fi
+      : > "$transcriber_error"
 
       if (
         mkdir -p "$output_dir/$source_dir"
         cd "$output_dir/$source_dir"
-        transcriber "$video_url"
+        transcriber "$video_url" 2> "$transcriber_error"
       ); then
+        cat "$transcriber_error" >&2
         printf '%s\n' "$video_id" >> "$processed_this_run"
+        if [[ "$retry_missing_subtitles" == true ]]; then
+          printf '%s\n' "$video_id" >> "$retried_missing_this_run"
+        fi
       else
+        cat "$transcriber_error" >&2
+        if grep -Fq 'Could not find the downloaded English VTT subtitle:' "$transcriber_error"; then
+          if ! grep -Fqx -- "$video_id" "$missing_subtitles_archive"; then
+            printf '%s\n' "$video_id" >> "$missing_subtitles_archive"
+            echo "Recorded missing English subtitles: $video_id" >&2
+          fi
+        fi
         echo "Failed to process $video_id" >&2
       fi
     done
@@ -253,4 +295,11 @@ fi
 # on the remote. Otherwise, successful local output is sufficient.
 if [[ -s "$processed_this_run" ]]; then
   cat "$processed_this_run" >> "$archive"
+fi
+
+if [[ -s "$retried_missing_this_run" ]]; then
+  awk 'NR == FNR { retried[$0] = 1; next } !($0 in retried)' \
+    "$retried_missing_this_run" "$missing_subtitles_archive" \
+    > "$remaining_missing_subtitles"
+  mv "$remaining_missing_subtitles" "$missing_subtitles_archive"
 fi

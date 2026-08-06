@@ -36,6 +36,19 @@ and `state/` directories, with Git synchronization disabled, run:
 ./scripts/run-local-poller
 ```
 
+To manually retry only the video IDs in
+`state/missing-english-subtitles.txt`, run:
+
+```sh
+./scripts/run-local-missing-subtitles
+```
+
+This manual retry scans the full history of the configured sources so older
+IDs can be found, but invokes the transcriber only for IDs in the missing-
+subtitle state file. A successful retry moves the ID to `processed.txt` and
+removes it from `missing-english-subtitles.txt`. Scheduled pollers do not enable
+this retry mode.
+
 The file uses `key=value` lines. Blank lines and lines beginning with `#` are
 ignored. Environment variables remain available as overrides for compatibility:
 
@@ -66,7 +79,9 @@ access token with write access to the output repository. The optional
 environment-only settings and cannot be placed in the configuration file.
 
 Successful video IDs are appended to `processed.txt` after local output is
-written, or after a successful push when Git is enabled. A failed transcription,
-commit, or push is not recorded and will be retried. The script uses `poll.lock`
-to prevent concurrent polls; when a poll is already running, another invocation
-exits successfully without doing work.
+written, or after a successful push when Git is enabled. Videos for which the
+transcriber reports that it could not find a downloaded English VTT subtitle
+are recorded in `missing-english-subtitles.txt` and skipped on later runs. Other
+failed transcriptions, commits, or pushes are not recorded and will be retried.
+The script uses `poll.lock` to prevent concurrent polls; when a poll is already
+running, another invocation exits successfully without doing work.

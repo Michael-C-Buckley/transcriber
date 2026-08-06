@@ -45,6 +45,8 @@ runs missed schedules after the machine next starts.
 
 The service stores its lock file and processed-video archive in
 `/var/lib/transcriber`; the archive is `/var/lib/transcriber/processed.txt`.
+Videos without a downloadable English VTT subtitle are recorded separately in
+`/var/lib/transcriber/missing-english-subtitles.txt` and skipped on later runs.
 Its output is in `outputDirectory`, with one directory per video containing
 the downloaded subtitle file, metadata, and the generated `transcript.txt`
 and `transcript.md` files.
