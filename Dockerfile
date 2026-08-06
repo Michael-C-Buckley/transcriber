@@ -10,18 +10,20 @@ COPY . .
 # package and ensures the image runs the scheduled/polling application.
 RUN nix \
     --extra-experimental-features "nix-command flakes" \
-    build .#poller
+    build .#poller .#cacert
 
 # Collect the complete runtime closure required by poller, including:
 RUN mkdir -p /runtime/nix/store \
-    && cp -a $(nix-store -qR result) /runtime/nix/store/
+    && cp -a $(nix-store -qR result result-1) /runtime/nix/store/
 
 # Create directories that must exist in the scratch image.
 RUN mkdir -p \
     /runtime/etc/transcriber \
+    /runtime/etc/ssl/certs \
     /runtime/var/lib/transcriber/state \
     /runtime/var/lib/transcriber/output \
     /runtime/tmp \
+    && cp result-1/etc/ssl/certs/ca-bundle.crt /runtime/etc/ssl/certs/ca-bundle.crt \
     && chown -R 65532:65532 \
       /runtime/var/lib/transcriber \
       /runtime/tmp

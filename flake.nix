@@ -28,6 +28,7 @@
         default = self.packages.${system}.transcriber;
         transcriber = pkgs.callPackage ./transcriber.nix {};
         poller = pkgs.callPackage ./poller.nix {};
+        cacert = pkgs.cacert;
         ytdlp-slim = pkgs.yt-dlp;
       }
     );
