@@ -9,6 +9,7 @@ in
 
       # Fetch the desired video source
       output="$(${getExe yt-dlp} \
+        --no-warnings \
         --js-runtimes "quickjs:${getExe quickjs-ng}" \
         --format b \
         --no-simulate \
