@@ -34,6 +34,7 @@ COPY --from=builder /runtime/ /
 COPY --from=builder /build/result /app
 
 ENV TMPDIR=/tmp
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt
 
 VOLUME ["/var/lib/transcriber"]
 
