@@ -1,6 +1,7 @@
 {pkgs}: let
   inherit (pkgs.lib) getExe;
   inherit (pkgs) yt-dlp python3 quickjs-ng;
+  provenance = pkgs.callPackage ./provenance.nix {};
 in
   pkgs.writeShellApplication {
     name = "transcriber";
@@ -31,5 +32,6 @@ in
 
       # Normalize the text for use
       ${getExe python3} ${./scripts/transcript.py} "$output"
+      ${getExe provenance} "$(dirname "$output")/source.info.json"
     '';
   }

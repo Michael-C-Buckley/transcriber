@@ -29,6 +29,7 @@ pkgs.writeShellApplication {
         esac
       '';
     };
+    provenance = pkgs.callPackage ./provenance.nix {};
     transcriber = pkgs.callPackage ./transcriber.nix {};
   };
   text = builtins.readFile ./scripts/poller;

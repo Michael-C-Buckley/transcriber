@@ -25,7 +25,10 @@ nix build
 
 The script creates a directory named after the video and its ID. It writes:
 
+- `id.txt` — the stable video ID as a single line
+- `source.md` — concise, Obsidian-compatible source metadata and links
 - `source.en.vtt` — the downloaded English subtitles
+- `source.info.json` — complete raw metadata from yt-dlp
 - `transcript.txt` — cleaned plain-text transcript
 - `transcript.md` — cleaned transcript with paragraph timestamps
 

@@ -19,6 +19,11 @@ Channel/
     successful.txt
     no-subs.txt
   Video title [VIDEO_ID]/
+    id.txt
+    source.md
+    source.info.json
+    transcript.md
+    transcript.txt
     ...
 ```
 
@@ -26,6 +31,13 @@ Channel/
 records videos for which the transcriber could not download English subtitles.
 When Git synchronization is enabled, state and transcript output are committed
 and pushed together.
+
+Every completed video directory also has two concise provenance files.
+`id.txt` contains only the video ID for simple discovery and shell tooling.
+`source.md` contains Obsidian-compatible YAML frontmatter followed by a readable
+source link and essential metadata. The larger `source.info.json` remains the
+canonical raw yt-dlp response. Polling automatically creates missing provenance
+files for older output without downloading or transcribing it again.
 
 Git synchronization is optional. When enabled, the poller initializes the
 output directory as a repository when necessary, fetches and pulls the

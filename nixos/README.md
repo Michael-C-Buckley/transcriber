@@ -48,8 +48,8 @@ part of `outputDirectory`: every source has `.state/successful.txt` and
 `.state/no-subs.txt`, so Git commits the poll decisions with the transcripts.
 Videos without a downloadable English VTT subtitle are recorded in
 `no-subs.txt` and skipped on later runs. Each video directory contains the
-downloaded subtitle file, metadata, and the generated `transcript.txt` and
-`transcript.md` files.
+downloaded subtitle file, raw metadata, concise `id.txt` and `source.md`
+provenance files, and the generated `transcript.txt` and `transcript.md` files.
 
 The service pulls `gitBranch` (`main` by default) before processing and pushes
 a `Transcriber output` commit afterward. Configure authentication for the

@@ -98,7 +98,9 @@ with a size of `10Gi`. The data volume is mounted at `/var/lib/transcriber`.
 The poller stores its runtime lock and temporary files in `state/`; durable
 state is checked in with transcripts as
 `output/<source>/.state/{successful,no-subs}.txt`. Videos recorded in
-`no-subs.txt` are skipped on later runs.
+`no-subs.txt` are skipped on later runs. Completed video directories contain a
+one-line `id.txt` and an Obsidian-compatible `source.md`; older output is
+backfilled during polling from its existing yt-dlp metadata.
 
 For Rook/Ceph or another cluster storage class, set the class without making
 the chart depend on a particular provisioner:

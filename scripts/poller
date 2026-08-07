@@ -184,6 +184,16 @@ transcriber_error=$(mktemp "$runtime_dir/.transcriber-error.XXXXXX")
 remaining_no_subs=$(mktemp "$runtime_dir/.remaining-no-subs.XXXXXX")
 trap 'rm -f "$transcriber_error" "$remaining_no_subs"' EXIT
 
+# Bring output created by older transcriber versions onto the provenance
+# contract without downloading or transcribing those videos again.
+while IFS= read -r -d '' info_json; do
+  video_directory=${info_json%/*}
+  if [[ ! -f "$video_directory/id.txt" || ! -f "$video_directory/source.md" ]]; then
+    echo "Backfilling provenance: $video_directory"
+    transcriber-provenance "$info_json"
+  fi
+done < <(find "$output_dir" -type f -name source.info.json -print0)
+
 while IFS= read -r source || [[ -n "$source" ]]; do
   # Ignore blank lines and comments.
   [[ -z "$source" || "$source" == \#* ]] && continue
