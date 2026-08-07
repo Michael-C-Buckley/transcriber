@@ -94,10 +94,11 @@ variable used by Git's non-interactive credential helper.
 ## Persistence
 
 By default the chart creates a `ReadWriteOnce` PVC named after the release,
-with a size of `10Gi`. The data volume is mounted at
-`/var/lib/transcriber`; the poller stores `processed.txt`,
-`missing-english-subtitles.txt`, and `poll.lock` in `state/`, and transcripts
-under `output/`. Videos recorded as missing subtitles are skipped on later runs.
+with a size of `10Gi`. The data volume is mounted at `/var/lib/transcriber`.
+The poller stores its runtime lock and temporary files in `state/`; durable
+state is checked in with transcripts as
+`output/<source>/.state/{successful,no-subs}.txt`. Videos recorded in
+`no-subs.txt` are skipped on later runs.
 
 For Rook/Ceph or another cluster storage class, set the class without making
 the chart depend on a particular provisioner:
@@ -122,8 +123,8 @@ persistence:
   enabled: false
 ```
 
-This uses `emptyDir`; `processed.txt` and generated output are lost when the
-Pod is deleted. The chart does not set a StorageClass when
+This uses `emptyDir`; source state and generated output are lost when the Pod
+is deleted. The chart does not set a StorageClass when
 `persistence.storageClass` is empty.
 
 ## Schedule and security
@@ -208,7 +209,6 @@ before uninstalling if it must be retained.
 | `sources.existingConfigMap` | `""` | Existing source ConfigMap name |
 | `transcriber.requestDelay` | `1` | Delay between extractor requests |
 | `transcriber.videoDelay` | `10` | Delay between videos |
-| `transcriber.scanLimit` | `20` | Videos inspected per existing source; new sources scan their full history |
 | `git.enabled` | `false` | Pull, commit, and push transcript output with Git |
 | `git.remote` | `""` | Git remote URL; required when Git is enabled |
 | `git.branch` | `main` | Transcript output branch |

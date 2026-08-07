@@ -34,7 +34,6 @@ sources:
 transcriber:
   requestDelay: 1
   videoDelay: 10
-  scanLimit: 20
   extraEnv: []
 
 git:

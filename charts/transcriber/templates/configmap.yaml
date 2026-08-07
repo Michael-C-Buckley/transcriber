@@ -7,12 +7,11 @@ metadata:
     {{- include "transcriber.labels" . | nindent 4 }}
 data:
   config: |-
-    state_dir={{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.stateSubPath }}
+    runtime_dir={{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.stateSubPath }}
     output_dir={{ printf "%s/%s" (trimSuffix "/" .Values.persistence.mountPath) .Values.persistence.outputSubPath }}
     sources_file=/etc/transcriber/sources.txt
     request_delay={{ .Values.transcriber.requestDelay }}
     video_delay={{ .Values.transcriber.videoDelay }}
-    scan_limit={{ .Values.transcriber.scanLimit }}
     git_enabled={{ .Values.git.enabled }}
     git_remote={{ .Values.git.remote }}
     git_branch={{ .Values.git.branch }}

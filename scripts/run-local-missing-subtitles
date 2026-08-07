@@ -7,7 +7,7 @@ repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 exec env \
   TRANSCRIBER_SOURCES="$repository_root/sources.txt" \
   TRANSCRIBER_OUTPUT_DIR="$repository_root/output" \
-  TRANSCRIBER_STATE_DIR="$repository_root/state" \
+  TRANSCRIBER_RUNTIME_DIR="$repository_root/state" \
   TRANSCRIBER_GIT_ENABLED=false \
   TRANSCRIBER_RETRY_MISSING_SUBTITLES=true \
   nix run "$repository_root#poller"

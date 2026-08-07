@@ -5,11 +5,11 @@ channels and playlists for new videos, then transcribes videos that have not
 previously completed successfully. Each run:
 
 - reads the configured channel or playlist URLs;
-- examines the full history of sources without an output directory and the
-  newest 20 videos from existing sources;
+- examines the full history of every source using yt-dlp's flat-playlist mode;
 - de-duplicates videos that appear in more than one source;
 - writes each transcript below the configured output directory; and
-- records successfully processed video IDs so later runs skip them.
+- records successful and no-subtitle video IDs per source so later runs skip
+  them.
 
 Import the module from this flake and configure one or more sources:
 
@@ -43,13 +43,13 @@ Import the module from this flake and configure one or more sources:
 `Mon *-*-* 09:00:00`. The timer adds up to ten minutes of randomized delay and
 runs missed schedules after the machine next starts.
 
-The service stores its lock file and processed-video archive in
-`/var/lib/transcriber`; the archive is `/var/lib/transcriber/processed.txt`.
-Videos without a downloadable English VTT subtitle are recorded separately in
-`/var/lib/transcriber/missing-english-subtitles.txt` and skipped on later runs.
-Its output is in `outputDirectory`, with one directory per video containing
-the downloaded subtitle file, metadata, and the generated `transcript.txt`
-and `transcript.md` files.
+The service stores its runtime lock in `/var/lib/transcriber`. Durable state is
+part of `outputDirectory`: every source has `.state/successful.txt` and
+`.state/no-subs.txt`, so Git commits the poll decisions with the transcripts.
+Videos without a downloadable English VTT subtitle are recorded in
+`no-subs.txt` and skipped on later runs. Each video directory contains the
+downloaded subtitle file, metadata, and the generated `transcript.txt` and
+`transcript.md` files.
 
 The service pulls `gitBranch` (`main` by default) before processing and pushes
 a `Transcriber output` commit afterward. Configure authentication for the

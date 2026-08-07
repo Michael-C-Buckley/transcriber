@@ -33,15 +33,6 @@ in {
       description = "Git branch used for transcript output.";
     };
 
-    scanLimit = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 20;
-      description = ''
-        Number of recent videos inspected for an existing source. Sources
-        without an output directory have their full history inspected.
-      '';
-    };
-
     calendar = lib.mkOption {
       type = lib.types.str;
       default = "daily";
@@ -64,10 +55,9 @@ in {
           ExecStart = lib.getExe (pkgs.callPackage ../poller.nix {});
 
           Environment = [
-            "TRANSCRIBER_STATE_DIR=/var/lib/transcriber"
+            "TRANSCRIBER_RUNTIME_DIR=/var/lib/transcriber"
             "TRANSCRIBER_OUTPUT_DIR=${cfg.outputDirectory}"
             "TRANSCRIBER_SOURCES=${sourcesFile}"
-            "TRANSCRIBER_SCAN_LIMIT=${toString cfg.scanLimit}"
             "TRANSCRIBER_GIT_ENABLED=true"
             "TRANSCRIBER_GIT_REMOTE=${cfg.gitRemote}"
             "TRANSCRIBER_GIT_BRANCH=${cfg.gitBranch}"

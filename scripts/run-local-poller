@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run one local poll using this checkout's existing sources, output, and state.
+# Run one local poll using this checkout's existing sources and output.
 set -euo pipefail
 
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -7,6 +7,6 @@ repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 exec env \
   TRANSCRIBER_SOURCES="$repository_root/sources.txt" \
   TRANSCRIBER_OUTPUT_DIR="$repository_root/output" \
-  TRANSCRIBER_STATE_DIR="$repository_root/state" \
+  TRANSCRIBER_RUNTIME_DIR="$repository_root/state" \
   TRANSCRIBER_GIT_ENABLED=false \
   nix run "$repository_root#poller"
