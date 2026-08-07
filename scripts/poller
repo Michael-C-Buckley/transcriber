@@ -28,7 +28,7 @@ read_config() {
     key=${key%"${key##*[![:space:]]}"}
 
     case "$key" in
-      runtime_dir | state_dir | output_dir | sources_file | request_delay | video_delay | git_enabled | git_remote | git_branch | git_author_name | git_author_email | git_commit_message)
+      runtime_dir | output_dir | sources_file | request_delay | video_delay | git_enabled | git_remote | git_branch | git_author_name | git_author_email | git_commit_message)
         config["$key"]=$value
         ;;
       *)
@@ -44,7 +44,7 @@ read_config
 
 output_dir=${TRANSCRIBER_OUTPUT_DIR:-${config[output_dir]:-/var/lib/transcriber/output}}
 sources_file=${TRANSCRIBER_SOURCES:-${config[sources_file]:-/etc/transcriber/sources.txt}}
-runtime_dir=${TRANSCRIBER_RUNTIME_DIR:-${TRANSCRIBER_STATE_DIR:-${config[runtime_dir]:-${config[state_dir]:-/var/lib/transcriber}}}}
+runtime_dir=${TRANSCRIBER_RUNTIME_DIR:-${config[runtime_dir]:-/var/lib/transcriber}}
 
 request_delay=${TRANSCRIBER_REQUEST_DELAY:-${config[request_delay]:-1}}
 video_delay=${TRANSCRIBER_VIDEO_DELAY:-${config[video_delay]:-10}}
@@ -73,10 +73,6 @@ for boolean_setting in git_enabled retry_missing_subtitles; do
   esac
 done
 
-# These legacy files are read only so an upgrade does not reprocess everything.
-# Newly discovered legacy entries are copied into the source-local state files.
-legacy_successful_archive="$runtime_dir/processed.txt"
-legacy_no_subs_archive="$runtime_dir/missing-english-subtitles.txt"
 lock="$runtime_dir/poll.lock"
 
 source_directory() {
@@ -233,15 +229,7 @@ done < "$sources_file" |
       no_subs_archive="$source_state_dir/no-subs.txt"
 
       if [[ "$retry_missing_subtitles" == true ]]; then
-        if ! grep -Fqx -- "$video_id" "$no_subs_archive"; then
-          if [[ -f "$legacy_no_subs_archive" ]] && \
-            grep -Fqx -- "$video_id" "$legacy_no_subs_archive"; then
-            printf '%s\n' "$video_id" >> "$no_subs_archive"
-            echo "Migrated legacy no-subs state: $video_id"
-          else
-            continue
-          fi
-        fi
+        grep -Fqx -- "$video_id" "$no_subs_archive" || continue
       fi
 
       if grep -Fqx -- "$video_id" "$successful_archive"; then
@@ -249,23 +237,9 @@ done < "$sources_file" |
         continue
       fi
 
-      if [[ -f "$legacy_successful_archive" ]] && \
-        grep -Fqx -- "$video_id" "$legacy_successful_archive"; then
-        printf '%s\n' "$video_id" >> "$successful_archive"
-        echo "Migrated legacy successful state: $video_id"
-        continue
-      fi
-
       if [[ "$retry_missing_subtitles" == false ]]; then
         if grep -Fqx -- "$video_id" "$no_subs_archive"; then
           echo "Skipping video without English subtitles: $video_id"
-          continue
-        fi
-
-        if [[ -f "$legacy_no_subs_archive" ]] && \
-          grep -Fqx -- "$video_id" "$legacy_no_subs_archive"; then
-          printf '%s\n' "$video_id" >> "$no_subs_archive"
-          echo "Migrated legacy no-subs state: $video_id"
           continue
         fi
       fi

@@ -114,11 +114,9 @@ When enabled, `git_remote` is required only if the output repository does not
 already have an `origin` remote.
 
 `runtime_dir` contains only the poll lock and temporary files; durable polling
-state lives under the output directory. `state_dir` and
-`TRANSCRIBER_STATE_DIR` remain accepted as compatibility aliases for
-`runtime_dir`. Existing `processed.txt` and
-`missing-english-subtitles.txt` files there are read and migrated into the
-source-local state files as matching videos are discovered.
+state lives under the output directory. Previous global `processed.txt` and
+`missing-english-subtitles.txt` files are not read; a deployment upgrading from
+that layout starts with fresh source-local state.
 
 For unattended HTTPS authentication, set `TRANSCRIBER_GIT_TOKEN` to a personal
 access token with write access to the output repository. The optional
