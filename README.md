@@ -29,7 +29,6 @@ The script creates a directory named after the video and its ID. It writes:
 - `source.md` — concise, Obsidian-compatible source metadata and links
 - `source.en.vtt` — the downloaded English subtitles
 - `source.info.json` — complete raw metadata from yt-dlp
-- `transcript.txt` — cleaned plain-text transcript
 - `transcript.md` — cleaned transcript with paragraph timestamps
 
 The command requires a video with English subtitles available. If it is
